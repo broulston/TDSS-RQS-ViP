@@ -1,4 +1,12 @@
-# TDSS Variable Star Vi
+# TDSS Repeat Quasar Spectroscopy (RQS) Vi
+
+[![GitHub release](https://img.shields.io/github/release-pre/broulston/TDSS-RQS-ViP.svg)](https://github.com/broulston/TDSS-RQS-ViP/releases/latest)
+[![GitHub commits](https://img.shields.io/github/commits-since/broulston/TDSS-RQS-ViP/v0.0.svg)](https://github.com/broulston/TDSS-RQS-ViP/commits/master)
+[![GitHub issues](https://img.shields.io/github/issues/broulston/TDSS-RQS-ViP.svg)](https://github.com/broulston/TDSS-RQS-ViP/issues)
+[![license](https://img.shields.io/github/license/broulston/TDSS-RQS-ViP.svg)](https://github.com/broulston/TDSS-RQS-ViP/blob/master/license.txt)
+[![Python Supported](https://img.shields.io/badge/Python%20Supported-3-brightgreen.svg)](conda)
+[![Maintenance](https://img.shields.io/maintenance/yes/2019.svg)]()
+[![Powered by Astropy](https://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org)
 
 `TDSS Vi` creates one (1) plot for each of the variable stars in the program sample. These plots are designed  to help summarize  as much information about each star as possible, and to aid in classification. Each plot currently contains: 
 
