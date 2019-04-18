@@ -10,6 +10,12 @@ would be nice to show these values on the light curve panel, and to
 plot the gband and r band as different symbols/colors.
 
 Both SDSS and Pan-STARRS photometry are listed in the light curves.
+Light curve filenames are based on either:
+      A) the SDSS_NAME (e.g., 000000.97+044947.2) from the DR7 or DR12
+      quasar catalogs, or
+      B) an internal ID (e.g., 42499) for newly discovered quasars in
+      the v5_9_1 SpAll file which did not have SDSS_NAME defined at
+      the time of target selection.
 
 No. lightcurves in gband/ folder (DR7-12Q+SDSS4):78153+38394=116547
 No. lightcurves in rband/ folder (DR7-12Q+SDSS4):78525+39709=118234
