@@ -24,359 +24,33 @@ from astropy import coordinates as coords
 
 import mimic_alpha as ma
 
-def plot_CSS_LC_noDrake(css_id, LC_OutDir, vartools_command, vartools_command_whitten, vartools_command_whitten2, vt_outdir, main_lc_data_files_path, plt_ax, runVartools=True, latestFullVartoolsRun=None):
-    vt_dir = '/usr/local/bin/'
-    col_names = ['MJD', 'mag', 'mag_err']
-    #css_id = the full path AND file name to the raw LC file from CSS
-    lc_data_pre_check = pd.read_csv(css_id, delim_whitespace = True, names = col_names)
-    lc_data = lc_data_pre_check.dropna(subset = col_names)
-    lc_data.iterrows()
-    lc_id = np.int(css_id.rstrip(".dat").lstrip(main_lc_data_files_path))
-    lc_mag = lc_data['mag']
-    lc_mjd = lc_data['MJD']
-    lc_err = lc_data['mag_err']
-    nmag = len(lc_mag)
-    errmn = np.mean(lc_err)
-    brt10per = np.percentile(lc_mag,10)
-    fnt10per = np.percentile(lc_mag,90)       
-    brt10data = lc_data[ lc_mag < brt10per ]
-    fnt10data = lc_data[ lc_mag > fnt10per ]
-    fntmags = fnt10data['mag']
-    fnterr = fnt10data['mag_err']
-    medmagfnt10 = np.median(fntmags)
-    mederrfnt10 = np.median(fnterr)
-    brtmags = brt10data['mag']
-    brterr = brt10data['mag_err']
-    medmagbrt10 = np.median(brtmags)
-    mederrbrt10 = np.median(brterr)
-    brtcutoff=medmagbrt10-(2*mederrbrt10)
-    fntcutoff=medmagfnt10+(2*mederrfnt10)
-    filter_data = lc_data[ (lc_mag >= brtcutoff) & (lc_mjd >= 0.0) ]
-    flc_data = filter_data[ filter_data['mag'] <= fntcutoff ] # same columns as lc_data
-    flc_mag = flc_data['mag']
-    flc_mjd = flc_data['MJD']
-    flc_err = flc_data['mag_err']
-    nfmag = len(flc_mag)
-    fmagmed = np.median(flc_mag)
-    fmagmn = np.mean(flc_mag)
-    fmagmax = np.max(flc_mag)
-    fmagmin = np.min(flc_mag)
-    ferrmed = np.median(flc_err)
-    ferrmn = np.mean(flc_err)
-    fmag_stdev = np.std(flc_mag)
-    rejects = nmag - nfmag 
-    mag_above = np.mean(lc_mag)-3*ferrmn
-    mag_below = np.mean(lc_mag)+3*ferrmn
-    nabove = np.where(lc_mag <= mag_above)[0].size
-    nbelow = np.where(lc_mag >= mag_below)[0].size
-    Mt = (fmagmax - fmagmed)/(fmagmax - fmagmin)
-    minpercent = np.percentile(flc_mag,5) # finds the 5th percentile mag value
-    maxpercent = np.percentile(flc_mag,95) # finds the 95th percentile mag value
-    a95 = maxpercent - minpercent
-    lc_skew = flc_mag.skew()
-    summation_eqn1 = np.sum( ((flc_mag - fmagmn)**2)/(flc_err**2) )
-    Chi2 = (1./(nfmag-1))*summation_eqn1
-    lc_file=LC_OutDir+str(lc_id)+'.lc'
-    z = flc_data[['MJD', 'mag', 'mag_err']].copy()
-    np.savetxt(lc_file, z.values, fmt="%12.5f %8.3f %8.3f ")#*******!
-    if runVartools:
-        vt_callLS = vt_dir+'vartools -i '+lc_file+vartools_command#*******!
-        vt_result = check_output(vt_callLS, shell=True)#*******!
-        Per_ls = ('%6.3f' % float(vt_result.split()[1]))
-        logProb_ls = ('%7.3f' % float(vt_result.split()[2]))
-        Amp_ls = ('%6.3f' % float(vt_result.split()[-1]))
-        Per_ls_num = float(vt_result.split()[1])
-        log10_P = np.log10(Per_ls_num)
-        sample_around_logP_region = 0.05
-        is_alias = ((log10_P >= np.log10(0.5)-sample_around_logP_region) & (log10_P <= np.log10(0.5)+sample_around_logP_region)) or ((log10_P >= np.log10(1.0)-sample_around_logP_region) & (log10_P <= np.log10(1.0)+sample_around_logP_region))
-        if is_alias:
-            vt_callLS = vt_dir+'vartools -i '+lc_file+vartools_command_whitten#*******!
-            vt_result = check_output(vt_callLS, shell=True)#*******!
-            Per_ls = ('%6.3f' % float(vt_result.split()[5]))
-            logProb_ls = ('%7.3f' % float(vt_result.split()[6]))
-            Amp_ls = ('%6.3f' % float(vt_result.split()[-1]))
-        Per_ls_num = float(vt_result.split()[5])
-        log10_P = np.log10(Per_ls_num)
-        is_alias2 = ((log10_P >= np.log10(0.5)-sample_around_logP_region) & (log10_P <= np.log10(0.5)+sample_around_logP_region)) or ((log10_P >= np.log10(1.0)-sample_around_logP_region) & (log10_P <= np.log10(1.0)+sample_around_logP_region))
-        if is_alias2:
-            vt_callLS = vt_dir+'vartools -i '+lc_file+vartools_command_whitten2#*******!
-            vt_result = check_output(vt_callLS, shell=True)#*******!
-            Per_ls = ('%6.3f' % float(vt_result.split()[9]))
-            logProb_ls = ('%7.3f' % float(vt_result.split()[10]))
-            Amp_ls = ('%6.3f' % float(vt_result.split()[-1]))
-        #print('\n CURRENTLY RUNNING VARTOOLS ON: '+str(lc_id))#*******!
-        #print('--'*30)#*******!
-        #print('[COMMAND]--',vt_callLS)#*******!
-        #print('[RESULT]--',vt_result)#*******!
-    else:
-        dataFrameIndex = np.where(latestFullVartoolsRun.lc_id == lc_id)[0][0]
-        #latestFullVartoolsRun_index = np.where(latestFullVartoolsRun[' dec'].values == 0.0)[0][0]
-        Per_ls = latestFullVartoolsRun.all_Per_ls[dataFrameIndex]
-        logProb_ls = latestFullVartoolsRun.all_logProb_ls[dataFrameIndex]
-        Amp_ls = latestFullVartoolsRun.all_Amp_ls[dataFrameIndex]
-        #all_a95 = latestFullVartoolsRun[' a95'].values[dataFrameIndex]
-        #all_ChiSq = latestFullVartoolsRun[' Chi2'].values[dataFrameIndex]
-        #all_skewness = latestFullVartoolsRun[' lc_skew'].values[dataFrameIndex]
+def plot_SDSS_LC(ID_list_ROW, plt_ax):
+    filename = ID_list_ROW[0]
+    ra = np.float64(ID_list_ROW[1])
+    dec = np.float64(ID_list_ROW[2])
+    meani = np.float64(ID_list_ROW[-1])
+    chiG = np.float64(ID_list_ROW[-3])
+    chiR = np.float64(ID_list_ROW[-2])
 
-    if np.float64(logProb_ls) < -10.0:
-        # ---------------------------
-        # Plot Phased LC from -LS
-        # ---------------------------
-        # read in the file
-        phLCdata = vt_outdir+str(lc_id)+'.lc.killharm.model'
-        phLC_colnames = ['MJD', 'Mag', 'PredMag', 'Magerr']
-        pLC = pd.read_csv(phLCdata, sep=' ', index_col=False, header=None,  names=phLC_colnames)
-        # assign lists to columns
-        plc_mjd= pLC['MJD']
-        nxt_mjd = [ ph+1 for ph in plc_mjd ] # add 1 to the phase to be able to plot phase from 0 to 2
-        plc_mag = pLC['Mag']
-        plc_predmag = pLC['PredMag']
-        plc_err = pLC['Magerr']
-        # plot the phased light curve
-        #fig_size = (8,6)
-        #plt_ax.figure(figsize=fig_size)  
-        #plt_ax.clf()
-        plt_ax.plot(plc_mjd,plc_mag, 'k.',ms=6, label='Phased LC') # phase 0 to 1
-        plt_ax.plot(nxt_mjd,plc_mag, 'k.',ms=6) # phase 1 to 2
-        # plot the predicted light curve with green open diamonds
-        plt_ax.plot(plc_mjd,plc_predmag,'D',ms=8,mfc='None',mec='green',mew=0.2, label='Predicted LC')  # green open Diamonds
-        plt_ax.plot(nxt_mjd,plc_predmag,'D',ms=8,mfc='None',mec='green',mew=0.2)  # green open Diamonds (for phase 1 to 2)
-        plt_ax.axhline(fmagmn, color='r', ls='-', lw=2, label='Mean Mag')
-        plt_ax.axhline(fmagmn+3*ferrmn, color='g', ls='-.', lw=2 ,alpha=0.5, label='3X Mag Err')
-        plt_ax.axhline(fmagmn-3*ferrmn, color='g', ls='-.', lw=2 ,alpha=0.5)
-        plt_ax.axhline(fmagmn+3*fmag_stdev, color='b', ls=':', lw=2,alpha=0.5, label='3X Mag StDev')
-        plt_ax.axhline(fmagmn-3*fmag_stdev, color='b', ls=':', lw=2,alpha=0.5)
-        if is_alias & is_alias2:
-            title_line1 = 'CSS ID: {!s} | P={!s} \n logProb={!s} | Amp={!s} \n ngood={!s} | nreject={!s} \n nabove={!s} ({!s}%) | nbelow={!s} ({!s}%) \n'.format(lc_id, Per_ls+"ww", logProb_ls, Amp_ls, nfmag, rejects, nabove, np.int(np.round((nabove/nmag)*100,2)), nbelow, np.int(np.round((nbelow/nmag)*100,2)))
-        elif is_alias:
-            title_line1 = 'CSS ID: {!s} | P={!s} \n logProb={!s} | Amp={!s} \n ngood={!s} | nreject={!s} \n nabove={!s} ({!s}%) | nbelow={!s} ({!s}%) \n'.format(lc_id, Per_ls+"w", logProb_ls, Amp_ls, nfmag, rejects, nabove, np.int(np.round((nabove/nmag)*100,2)), nbelow, np.int(np.round((nbelow/nmag)*100,2)))
-        else:
-            title_line1 = 'CSS ID: {!s} | P={!s} \n logProb={!s} | Amp={!s} \n ngood={!s} | nreject={!s} \n nabove={!s} ({!s}%) | nbelow={!s} ({!s}%) \n'.format(lc_id, Per_ls, logProb_ls, Amp_ls, nfmag, rejects, nabove, np.int(np.round((nabove/nmag)*100,2)), nbelow, np.int(np.round((nbelow/nmag)*100,2)))
-        #title_line2 = 'Drake: P={!s} | Amp={!s} | VarType={!s} | Subclass={!s}'.format(D_Per, D_Amp, D_Vartype, D_sub)
-        title_str = title_line1 #+title_line2
-        plt_ax.set_title(title_str, fontsize=12)
-        plt_ax.set_xlabel('Phase')
-        plt_ax.set_ylabel('mag')
-        plt_ax.invert_yaxis() # flip the y-axis so fainter mags are on bottom
-        # save plot
-        #plotname = plt_dir+lc_id+'_plc'+'.eps'
-        #plt_ax.savefig(plotname,dpi=600,bbox_inches='tight')
-        #plt_ax.clf()
-        #plt_ax.close()
-    else:
-        # ------------------
-        # Plot Raw LC:
-        # ------------------
-        #plot(lc_mjd,lc_mag, 'k.',ms=6)  use the filtered data below
-        plt_ax.plot(flc_mjd, flc_mag, 'k.', ms=6, label='Raw Data') 
-        # draw a y=constant line with plt.axhline(y, xmin, xmax) 
-        # plot mean mag. as solid line
-        plt_ax.axhline(fmagmn, color='r', ls='-', lw=2, label='Mag. Mean')
-        # plot 3X errmn as dashed line
-        plt_ax.axhline(fmagmn+3*ferrmn, color='g', ls='--', lw=2 ,alpha=0.5, label='3x Mean Mag. Err')
-        plt_ax.axhline(fmagmn-3*ferrmn, color='g', ls='--', lw=2 ,alpha=0.5)
-        # plot 3X stdev as dotted line
-        plt_ax.axhline(fmagmn+3*fmag_stdev, color='b', ls=':', lw=2,alpha=0.5, label='3x StDev Mag.')
-        plt_ax.axhline(fmagmn-3*fmag_stdev, color='b', ls=':', lw=2,alpha=0.5)
-        # set plot labels
-        #title_str = f'{lc_id} \n mean mag. = {fmagmn:0.2f}'
-        if is_alias:
-            title_line1 = 'CSS ID: {!s} | P={!s} \n logProb={!s} | Amp={!s} \n ngood={!s} | nreject={!s} \n nabove={!s} ({!s}%) | nbelow={!s} ({!s}%) \n'.format(lc_id, Per_ls+"w", logProb_ls, Amp_ls, nfmag, rejects, nabove, np.int(np.round((nabove/nmag)*100,2)), nbelow, np.int(np.round((nbelow/nmag)*100,2)))
-        else:
-            title_line1 = 'CSS ID: {!s} | P={!s} \n logProb={!s} | Amp={!s}  \n ngood={!s} | nreject={!s} \n nabove={!s} ({!s}%) | nbelow={!s} ({!s}%) \n'.format(lc_id, Per_ls, logProb_ls, Amp_ls, nfmag, rejects, nabove, np.int(np.round((nabove/nmag)*100,2)), nbelow, np.int(np.round((nbelow/nmag)*100,2)))
-        plt_ax.set_title(title_line1, fontsize=12)
-        plt_ax.set_xlabel('MJD')
-        plt_ax.set_ylabel('Mag')
-        #plt_ax.legend(loc='upper right', fontsize=8)
-        plt_ax.invert_yaxis() # flip the y-axis so fainter mags are on bottom
+    try:
+        rband_data = np.loadtxt("LCs/rband/"+filename)
+        plt_ax.scatter(rband_data[:,0], rband_data[:,1], color='red', marker='s', label='r')
+    except:
+        pass
 
-    prop_header = "lc_id, Per_ls, logProb_ls, Amp_ls, Mt, a95, lc_skew, Chi2, brtcutoff, brt10per, fnt10per, fntcutoff, errmn, ferrmn, ngood, nrejects, nabove, nbelow"
-    if runVartools:
-        properties = np.array([lc_id, Per_ls, logProb_ls, Amp_ls, Mt, a95, lc_skew, Chi2, 
-                               brtcutoff, brt10per, fnt10per, fntcutoff, errmn, ferrmn, nfmag, rejects, nabove, nbelow])
-    else:
-        dataFrameIndex = np.where(latestFullVartoolsRun[' lc_id'].values == lc_id)[0][0]
-        properties = latestFullVartoolsRun.latestFullVartoolsRun.values[dataFrameIndex,2:]
-        #properties = latestFullVartoolsRun.values[dataFrameIndex, 2:]
-    return properties
+    try:
+        gband_data = np.loadtxt("LCs/gband/"+filename)
+        plt_ax.scatter(gband_data[:,0], gband_data[:,1], color='blue', marker='o', label='g')
+    except:
+        pass
 
-def plot_CSS_LC_Drake(css_id, LC_OutDir, vartools_command, vartools_command_whitten, vartools_command_whitten2, vt_outdir, main_lc_data_files_path, D_Per, D_Amp, D_Vartype, plt_ax, runVartools=True, latestFullVartoolsRun=None):
-    vt_dir = '/usr/local/bin/'
-    col_names = ['MJD', 'mag', 'mag_err']
-    #css_id = the full path AND file name to the raw LC file from CSS
-    lc_data_pre_check = pd.read_csv(css_id, delim_whitespace = True, names = col_names)
-    lc_data = lc_data_pre_check.dropna(subset = col_names)
-    lc_data.iterrows()
-    lc_id = np.int(css_id.rstrip(".dat").lstrip(main_lc_data_files_path))
-    lc_mag = lc_data['mag']
-    lc_mjd = lc_data['MJD']
-    lc_err = lc_data['mag_err']
-    nmag = len(lc_mag)
-    errmn = np.mean(lc_err)
-    brt10per = np.percentile(lc_mag,10)
-    fnt10per = np.percentile(lc_mag,90)       
-    brt10data = lc_data[ lc_mag < brt10per ]
-    fnt10data = lc_data[ lc_mag > fnt10per ]
-    fntmags = fnt10data['mag']
-    fnterr = fnt10data['mag_err']
-    medmagfnt10 = np.median(fntmags)
-    mederrfnt10 = np.median(fnterr)
-    brtmags = brt10data['mag']
-    brterr = brt10data['mag_err']
-    medmagbrt10 = np.median(brtmags)
-    mederrbrt10 = np.median(brterr)
-    brtcutoff=medmagbrt10-(2*mederrbrt10)
-    fntcutoff=medmagfnt10+(2*mederrfnt10)
-    filter_data = lc_data[ (lc_mag >= brtcutoff) & (lc_mjd >= 0.0) ]
-    flc_data = filter_data[ filter_data['mag'] <= fntcutoff ] # same columns as lc_data
-    flc_mag = flc_data['mag']
-    flc_mjd = flc_data['MJD']
-    flc_err = flc_data['mag_err']
-    nfmag = len(flc_mag)
-    fmagmed = np.median(flc_mag)
-    fmagmn = np.mean(flc_mag)
-    fmagmax = np.max(flc_mag)
-    fmagmin = np.min(flc_mag)
-    ferrmed = np.median(flc_err)
-    ferrmn = np.mean(flc_err)
-    fmag_stdev = np.std(flc_mag)
-    rejects = nmag - nfmag 
-    mag_above = np.mean(lc_mag)-3*ferrmn
-    mag_below = np.mean(lc_mag)+3*ferrmn
-    nabove = np.where(lc_mag <= mag_above)[0].size
-    nbelow = np.where(lc_mag >= mag_below)[0].size
-    Mt = (fmagmax - fmagmed)/(fmagmax - fmagmin)
-    minpercent = np.percentile(flc_mag,5) # finds the 5th percentile mag value
-    maxpercent = np.percentile(flc_mag,95) # finds the 95th percentile mag value
-    a95 = maxpercent - minpercent
-    lc_skew = flc_mag.skew()
-    summation_eqn1 = np.sum( ((flc_mag - fmagmn)**2)/(flc_err**2) )
-    Chi2 = (1./(nfmag-1))*summation_eqn1
-    lc_file=LC_OutDir+str(lc_id)+'.lc'
-    z = flc_data[['MJD', 'mag', 'mag_err']].copy()
-    np.savetxt(lc_file, z.values, fmt="%12.5f %8.3f %8.3f ")#*******!
-    if runVartools:
-        vt_callLS = vt_dir+'vartools -i '+lc_file+vartools_command#*******!
-        vt_result = check_output(vt_callLS, shell=True)#*******!
-        Per_ls = ('%6.3f' % float(vt_result.split()[1]))
-        logProb_ls = ('%7.3f' % float(vt_result.split()[2]))
-        Amp_ls = ('%6.3f' % float(vt_result.split()[-1]))
-        Per_ls_num = float(vt_result.split()[1])
-        log10_P = np.log10(Per_ls_num)
-        sample_around_logP_region = 0.05
-        is_alias = ((log10_P >= np.log10(0.5)-sample_around_logP_region) & (log10_P <= np.log10(0.5)+sample_around_logP_region)) or ((log10_P >= np.log10(1.0)-sample_around_logP_region) & (log10_P <= np.log10(1.0)+sample_around_logP_region))
-        if is_alias:
-            vt_callLS = vt_dir+'vartools -i '+lc_file+vartools_command_whitten#*******!
-            vt_result = check_output(vt_callLS, shell=True)#*******!
-            Per_ls = ('%6.3f' % float(vt_result.split()[5]))
-            logProb_ls = ('%7.3f' % float(vt_result.split()[6]))
-            Amp_ls = ('%6.3f' % float(vt_result.split()[-1]))
-        Per_ls_num = float(vt_result.split()[5])
-        log10_P = np.log10(Per_ls_num)
-        is_alias2 = ((log10_P >= np.log10(0.5)-sample_around_logP_region) & (log10_P <= np.log10(0.5)+sample_around_logP_region)) or ((log10_P >= np.log10(1.0)-sample_around_logP_region) & (log10_P <= np.log10(1.0)+sample_around_logP_region))
-        if is_alias2:
-            vt_callLS = vt_dir+'vartools -i '+lc_file+vartools_command_whitten2#*******!
-            vt_result = check_output(vt_callLS, shell=True)#*******!
-            Per_ls = ('%6.3f' % float(vt_result.split()[9]))
-            logProb_ls = ('%7.3f' % float(vt_result.split()[10]))
-            Amp_ls = ('%6.3f' % float(vt_result.split()[-1]))
-        #print('\n CURRENTLY RUNNING VARTOOLS ON: '+str(lc_id))#*******!
-        #print('--'*30)#*******!
-        #print('[COMMAND]--',vt_callLS)#*******!
-        #print('[RESULT]--',vt_result)#*******!
-    else:
-        dataFrameIndex = np.where(latestFullVartoolsRun.lc_id == lc_id)[0][0]
-        #latestFullVartoolsRun_index = np.where(latestFullVartoolsRun[' dec'].values == 0.0)[0][0]
-        Per_ls = latestFullVartoolsRun.all_Per_ls[dataFrameIndex]
-        logProb_ls = latestFullVartoolsRun.all_logProb_ls[dataFrameIndex]
-        Amp_ls = latestFullVartoolsRun.all_Amp_ls[dataFrameIndex]
-        #all_a95 = latestFullVartoolsRun[' a95'].values[dataFrameIndex]
-        #all_ChiSq = latestFullVartoolsRun[' Chi2'].values[dataFrameIndex]
-        #all_skewness = latestFullVartoolsRun[' lc_skew'].values[dataFrameIndex]
-    if np.float64(logProb_ls) < -10.0:
-        # ---------------------------
-        # Plot Phased LC from -LS
-        # ---------------------------
-        # read in the file
-        phLCdata = vt_outdir+str(lc_id)+'.lc.killharm.model'
-        phLC_colnames = ['MJD', 'Mag', 'PredMag', 'Magerr']
-        pLC = pd.read_csv(phLCdata, sep=' ', index_col=False, header=None,  names=phLC_colnames)
-        # assign lists to columns
-        plc_mjd= pLC['MJD']
-        nxt_mjd = [ ph+1 for ph in plc_mjd ] # add 1 to the phase to be able to plot phase from 0 to 2
-        plc_mag = pLC['Mag']
-        plc_predmag = pLC['PredMag']
-        plc_err = pLC['Magerr']
-        # plot the phased light curve
-        #fig_size = (8,6)
-        #plt_ax.figure(figsize=fig_size)  
-        #plt_ax.clf()
-        plt_ax.plot(plc_mjd,plc_mag, 'k.',ms=6, label='Phased LC') # phase 0 to 1
-        plt_ax.plot(nxt_mjd,plc_mag, 'k.',ms=6) # phase 1 to 2
-        # plot the predicted light curve with green open diamonds
-        plt_ax.plot(plc_mjd,plc_predmag,'D',ms=8,mfc='None',mec='green',mew=0.2, label='Predicted LC')  # green open Diamonds
-        plt_ax.plot(nxt_mjd,plc_predmag,'D',ms=8,mfc='None',mec='green',mew=0.2)  # green open Diamonds (for phase 1 to 2)
-        plt_ax.axhline(fmagmn, color='r', ls='-', lw=2, label='Mean Mag')
-        plt_ax.axhline(fmagmn+3*ferrmn, color='g', ls='-.', lw=2 ,alpha=0.5, label='3X Mag Err')
-        plt_ax.axhline(fmagmn-3*ferrmn, color='g', ls='-.', lw=2 ,alpha=0.5)
-        plt_ax.axhline(fmagmn+3*fmag_stdev, color='b', ls=':', lw=2,alpha=0.5, label='3X Mag StDev')
-        plt_ax.axhline(fmagmn-3*fmag_stdev, color='b', ls=':', lw=2,alpha=0.5)
-        if is_alias:
-            title_line1 = 'CSS ID: {!s} | P={!s} \n logProb={!s} | Amp={!s}  \n ngood={!s} | nreject={!s} \n nabove={!s} ({!s}%) | nbelow={!s} ({!s}%) \n'.format(lc_id, Per_ls+"w", logProb_ls, Amp_ls, nfmag, rejects, nabove, np.int(np.round((nabove/nmag)*100,2)), nbelow, np.int(np.round((nbelow/nmag)*100,2)))
-        else:
-            title_line1 = 'CSS ID: {!s} | P={!s} \n logProb={!s} | Amp={!s}  \n ngood={!s} | nreject={!s} \n nabove={!s} ({!s}%) | nbelow={!s} ({!s}%) \n'.format(lc_id, Per_ls, logProb_ls, Amp_ls, nfmag, rejects, nabove, np.int(np.round((nabove/nmag)*100,2)), nbelow, np.int(np.round((nbelow/nmag)*100,2)))
-        #title_line2 = 'Drake: P={!s} | Amp={!s} | VarType={!s} | Subclass={!s}'.format(D_Per, D_Amp, D_Vartype, D_sub)
-        title_str = title_line1 #+title_line2
-        plt_ax.set_title(title_str, fontsize=12)
-        plt_ax.set_xlabel('Phase')
-        plt_ax.set_ylabel('mag')
-        plt_ax.invert_yaxis() # flip the y-axis so fainter mags are on bottom
-        # save plot
-        #plotname = plt_dir+lc_id+'_plc'+'.eps'
-        #plt_ax.savefig(plotname,dpi=600,bbox_inches='tight')
-        #plt_ax.clf()
-        #plt_ax.close()
-    else:
-        # ------------------
-        # Plot Raw LC:
-        # ------------------
-        #plot(lc_mjd,lc_mag, 'k.',ms=6)  use the filtered data below
-        plt_ax.plot(flc_mjd, flc_mag, 'k.', ms=6, label='Raw Data') 
-        # draw a y=constant line with plt.axhline(y, xmin, xmax) 
-        # plot mean mag. as solid line
-        plt_ax.axhline(fmagmn, color='r', ls='-', lw=2, label='Mag. Mean')
-        # plot 3X errmn as dashed line
-        plt_ax.axhline(fmagmn+3*ferrmn, color='g', ls='--', lw=2 ,alpha=0.5, label='3x Mean Mag. Err')
-        plt_ax.axhline(fmagmn-3*ferrmn, color='g', ls='--', lw=2 ,alpha=0.5)
-        # plot 3X stdev as dotted line
-        plt_ax.axhline(fmagmn+3*fmag_stdev, color='b', ls=':', lw=2,alpha=0.5, label='3x StDev Mag.')
-        plt_ax.axhline(fmagmn-3*fmag_stdev, color='b', ls=':', lw=2,alpha=0.5)
-        # set plot labels
-        #title_str = f'{lc_id} \n mean mag. = {fmagmn:0.2f}'
-        if is_alias & is_alias2:
-            title_line1 = 'CSS ID: {!s} | P={!s} \n logProb={!s} | Amp={!s}  \n ngood={!s} | nreject={!s} \n nabove={!s} ({!s}%) | nbelow={!s} ({!s}%) \n'.format(lc_id, Per_ls+"ww", logProb_ls, Amp_ls, nfmag, rejects, nabove, np.int(np.round((nabove/nmag)*100,2)), nbelow, np.int(np.round((nbelow/nmag)*100,2)))
-        elif is_alias:
-            title_line1 = 'CSS ID: {!s} | P={!s} \n logProb={!s} | Amp={!s}  \n ngood={!s} | nreject={!s} \n nabove={!s} ({!s}%) | nbelow={!s} ({!s}%) \n'.format(lc_id, Per_ls+"w", logProb_ls, Amp_ls, nfmag, rejects, nabove, np.int(np.round((nabove/nmag)*100,2)), nbelow, np.int(np.round((nbelow/nmag)*100,2)))
-        else:
-            title_line1 = 'CSS ID: {!s} | P={!s} \n logProb={!s} | Amp={!s}  \n ngood={!s} | nreject={!s} \n nabove={!s} ({!s}%) | nbelow={!s} ({!s}%) \n'.format(lc_id, Per_ls, logProb_ls, Amp_ls, nfmag, rejects, nabove, np.int(np.round((nabove/nmag)*100,2)), nbelow, np.int(np.round((nbelow/nmag)*100,2)))
-        title_line2 = 'Drake: P={!s} | Amp={!s} | VarType={!s} '.format(D_Per, D_Amp, D_Vartype)
-        #title_line2 = 'Drake: P={!s} | Amp={!s} | VarType={!s} | Subclass={!s}'.format(D_Per, D_Amp, D_Vartype, D_sub)
-        plt_ax.set_title(title_line1+" \n "+title_line2, fontsize=12)
-        plt_ax.set_xlabel('MJD')
-        plt_ax.set_ylabel('Mag')
-        #plt_ax.legend(loc='upper right', fontsize=8)
-        plt_ax.invert_yaxis() # flip the y-axis so fainter mags are on bottom
+    title_line = "SDSS{!s} | RA={!s} DEC={!s} \n  i={!s}  $\chi^2_g=${!s} $\chi^2_r=${!s}".format(filename, np.round(ra, 6), np.round(dec, 6),
+                                                                    np.round(meani, 2), np.round(chiG, 2),
+                                                                    np.round(chiR, 2))
 
-    prop_header = "lc_id, Per_ls, logProb_ls, Amp_ls, Mt, a95, lc_skew, Chi2, brtcutoff, brt10per, fnt10per, fntcutoff, errmn, ferrmn, rejects, nabove, nbelow"
-    if runVartools:
-        properties = np.array([lc_id, Per_ls, logProb_ls, Amp_ls, Mt, a95, lc_skew, Chi2, 
-                               brtcutoff, brt10per, fnt10per, fntcutoff, errmn, ferrmn, rejects, nabove, nbelow])
-    else:
-        dataFrameIndex = np.where(latestFullVartoolsRun.lc_id == lc_id)[0][0]
-        #properties = latestFullVartoolsRun.values[dataFrameIndex, 2:]
-        properties = latestFullVartoolsRun.latestFullVartoolsRun.values[dataFrameIndex,2:]
-
-    return properties
+    plt_ax.set_xlabel('MJD')
+    plt_ax.set_ylabel('Mag')
+    plt_ax.set_title(title_line, fontsize=12)
 
 def plot_SDSS_DR_spec(plate_string, mjd_string, fiberid_string, object_color, object_SDSS_Mr, TDSSprop, TDSS_file_index, box_size, plt_ax):
     raw_SDSS_fits_dir = "/Users/benjaminroulston/Dropbox/Research/TDSS/Variable_Stars/HARD_COPY_ORGINAL_DATA/SDSS_spec/getting_DR14_spec/RAW_spec/"
@@ -738,7 +412,7 @@ def plot_SDSS_prop_spec(plate, mjd, fiberid, object_color, object_SDSS_Mr, TDSSp
         plt_ax.text(lineList_wavelength[ll]+20.0,plt_ax.get_ylim()[0]+0.50,lineList_labels[ll],rotation=90, color=ma.colorAlpha_to_rgb('k', 0.2)[0])
     return this_EqW
 
-def plot_SDSS_photo(ra, dec, image_dir, plt_ax):
+def plot_SDSS_photo(ra, dec, image_dir, plt_ax, deletePhoto=True):
     ra_string = '{:0>9.5f}'.format(ra)
     dec_string = '{:0=+10.5f}'.format(dec)
 
@@ -769,51 +443,30 @@ def plot_SDSS_photo(ra, dec, image_dir, plt_ax):
     plt_ax.set_yticks([])
     #WCSAxes(plt_ax, wcs=)
     plt_ax.scatter(impix/2.0, impix/2.0, s=fiber_marker_scale, edgecolors='white', marker="+", facecolors='none')
+    if deletePhoto:
+        delete_result = check_output("rm "+image_filename, shell=True)
 
-def plot_CMD(xi, yi, zi, object_color, object_color_errs, object_absM, object_absM_errs, upperLimDist, lowerLim_M, plt_ax):
-    sdss_zams_prop_dir = "/Users/benjaminroulston/Dropbox/Research/TDSS/General/SpecTypeProp/"
-    sdss_zams_prop =  np.genfromtxt(sdss_zams_prop_dir+"tab5withMvSDSScolors.dat")
+#def plot_CCD(xi, yi, zi, object_color, object_color_errs, object_absM, object_absM_errs, upperLimDist, lowerLim_M, plt_ax):
+def plot_CCD(ID_list_ROW, ccd_kde, plt_ax):
+    umg = np.float64(ID_list_ROW[4]) - np.float64(ID_list_ROW[6])
+    gmr = np.float64(ID_list_ROW[6]) - np.float64(ID_list_ROW[8])
 
-    #M_r = sdss_zams_prop[:,3]  
-    M_i = sdss_zams_prop[:,4]  
-    g_r = sdss_zams_prop[:,14]
-    g_i = g_r + sdss_zams_prop[:,15]
-    #M_r_zabms = -0.75 + M_r
-    M_i_zabms = -0.75 + M_i
+    xi, yi, zi = ccd_kde
 
-    # Gaia_CMD_dir = "/Users/benjaminroulston/Dropbox/Research/TDSS/Variable_Stars/WORKING_DIRECTORY/Vi/Vi_program/sup_data/"
-    # Gaia_CMD_data = fits.open(Gaia_CMD_dir+"Gaia_table1b_for_CMD.fits")
-
-    # bp_rp_err_nan =  np.isnan(Gaia_CMD_data[1].data.field('e_bp_min_rp_val'))
-    # usable_bp_rp_index = np.where(bp_rp_err_nan == False)[0] 
-
-    # Gaia_G = Gaia_CMD_data[1].data.field('Gmag')
-    # Gaia_bp_rp = Gaia_CMD_data[1].data.field('bp_rp')
-    # sdss_dr7_wd = fits.open(sdss_zams_prop_dir+"SDSS_DR7_WD_with_Gaia.fits")
-    # wd_Gaia_dist = sdss_dr7_wd[1].data.field('rest')
-    # wd_g = sdss_dr7_wd[1].data.field('gmag')
-    # wd_r = sdss_dr7_wd[1].data.field('rmag')
-    # wd_M_r = wd_r + 5.0 -5.0*np.log10(wd_Gaia_dist)
-    # wd_gmr = wd_g -  wd_r
-    #cmd_data = [gaia_bp_rp[~np.isnan(gaia_bp_rp)],gaia_Mg[~np.isnan(gaia_bp_rp)]]
-    #k = kde.gaussian_kde(cmd_data)
-    #nbins=20
-    #xi, yi = np.mgrid[cmd_data[0].min():cmd_data[0].max():nbins*1j, cmd_data[1].min():cmd_data[1].max():nbins*1j]
-    #zi = kde(np.vstack([xi.flatten(), yi.flatten()]))
     plt_ax.pcolormesh(xi, yi, zi.reshape(xi.shape), shading='gouraud', cmap=plt.cm.viridis)
-    plt_ax.set_xlabel("$g - i$")
-    plt_ax.set_ylabel("M$_{i}$")
+    plt_ax.set_xlabel("$u - g$")
+    plt_ax.set_ylabel("$g - r$")
 
-    plt_ax.set_xlim([-1.0,4.5])
-    plt_ax.set_ylim([-1.0,15.0])
-    plt_ax.invert_yaxis()
+    plt_ax.set_xlim([-2.0,2.0])
+    plt_ax.set_ylim([-2.0,2.0])
+    #plt_ax.invert_yaxis()
 
-    plt_ax.plot(g_i,M_i, color="orange", lw=2.0)
-    plt_ax.plot(g_i,M_i_zabms, color="darkred", lw=2.0)
+    plt_ax.plot(umg, gmr, color="orange", lw=2.0)
+    #plt_ax.plot(g_i,M_i_zabms, color="darkred", lw=2.0)
 
-    plt_ax.errorbar(object_color, object_absM, xerr=object_color_errs, yerr=object_absM_errs,uplims=True, lolims=False, color='red', marker="+", markersize= 5, zorder=10)
+    #plt_ax.errorbar(object_color, object_absM, xerr=object_color_errs, yerr=object_absM_errs,uplims=True, lolims=False, color='red', marker="+", markersize= 5, zorder=10)
 
-    title_str = "M$_i$ = {!s} \n g-i = {!s} \n UpperLim Dist = {!s} pc \n LowerLim Mi = {!s}".format(np.round(object_absM,2), np.round(object_color,2),np.int(np.round(upperLimDist,2)), np.round(lowerLim_M,2))
+    title_str = "u-g = {!s} | g-r = {!s}".format(np.round(umg, 2), np.round(gmr,2))
     plt_ax.set_title(title_str, fontsize=12)
 
 def plot_middle(css_id, latestFullVartoolsRun, xi, yi, zi, plt_ax):
@@ -918,30 +571,20 @@ def removeSdssStitchSpike(wavelength, flux):
                                   [flux[lower],flux[upper]])
     return flux
 
-def makeViDirs(Vi_dir="/Users/benjaminroulston/Dropbox/Research/TDSS/Variable_Stars/WORKING_DIRECTORY/Vi/"):
+def makeViDirs(Vi_dir="output/"):
     datestr = check_output(["/bin/date","+%F"])
     datestr = datestr.decode().replace('\n', '')
     if not os.path.exists(Vi_dir+datestr):
         os.mkdir(Vi_dir+datestr)
-    vt_outdir = Vi_dir+datestr+"/varout/"
-    lc_dir = Vi_dir+datestr+"/LC/"
-    lc_plt_dir = Vi_dir+datestr+"/LC_plots/"
+    image_dir = Vi_dir+datestr+"/postage_stamps/"
     Vi_plots_dir = Vi_dir+datestr+"/Vi_plots/"
-    #photo_img_dir = Vi_dir+datestr+"/photo_img/"
-    if not os.path.exists(vt_outdir):
-        os.mkdir(vt_outdir)
-    if not os.path.exists(lc_dir):
-        os.mkdir(lc_dir)
-    # if not os.path.exists(lc_plt_dir):
-    #     os.mkdir(lc_plt_dir)
     if not os.path.exists(Vi_plots_dir):
         os.mkdir(Vi_plots_dir)
-    # if not os.path.exists(photo_img_dir):
-    #     os.mkdir(photo_img_dir)
-    prop_out_dir = Vi_dir+datestr+"/"
-    return prop_out_dir, vt_outdir, lc_dir, Vi_plots_dir, datestr
+    if not os.path.exists(image_dir):
+        os.mkdir(image_dir)
+    return image_dir, Vi_plots_dir, datestr
 
-def checkViRun(TDSS_cssid, Vi_dir="/Users/benjaminroulston/Dropbox/Research/TDSS/Variable_Stars/WORKING_DIRECTORY/Vi/"):
+def checkViRun(TDSS_cssid, Vi_dir="output/"):
     from pathlib import Path
     datestr = check_output(["/bin/date","+%F"])
     datestr = datestr.decode().replace('\n', '')

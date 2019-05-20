@@ -25,47 +25,66 @@ from astropy.io import fits
 from astropy import coordinates as coords
 
 import mimic_alpha as ma
-import VarStar_Vi_plot_functions as vi
+import TDSS_RQS_ViP_FUNCTIONS as vi
 import importlib
-
-vt_dir = '/usr/local/bin/'
-Vi_dir = "/Users/benjaminroulston/Dropbox/Research/TDSS/Variable_Stars/WORKING_DIRECTORY/Vi/"
 
 spAll_dir = "/Users/benjaminroulston/Dropbox/Research/TDSS/Variable_Stars/HARD_COPY_ORGINAL_DATA/SDSS_spec/getting_prop_spec/"
 spAll  = fits.open(spAll_dir+'spAll-v5_10_10_propSPEC.fits')
 
-main_lc_data_files_path="/Users/benjaminroulston/Dropbox/Research/TDSS/Variable_Stars/HARD_COPY_ORGINAL_DATA/CSS_LCs/csvs/"
+main_lc_data_files_path="LCs/"
+
+ID_list = np.genfromtxt('ID_list.dat', dtype="U")
+u = np.float64(ID_list[:,4])
+g = np.float64(ID_list[:,6])
+r = np.float64(ID_list[:,8])
+i = np.float64(ID_list[:,10])
+z = np.float64(ID_list[:,12])
+
+umg = u - g
+gmr = g - r
+
+cmd_data = [umg, gmr]
+k = kde.gaussian_kde(cmd_data)
+nbins=50
+xi, yi = np.mgrid[cmd_data[0].min():cmd_data[0].max():nbins*1j, cmd_data[1].min():cmd_data[1].max():nbins*1j]
+zi = k(np.vstack([xi.flatten(), yi.flatten()]))
+
+ccd_kde = (xi, yi, zi)
+
+image_dir = "output/postage_stamps/"
+
+image_dir, Vi_plots_dir, datestr = vi.makeViDirs()
 #***********************************************
-prop_out_dir, vt_outdir, lc_dir, Vi_plots_dir, datestr = vi.makeViDirs()
-csv_raw_ids, CSS_LCs, col_names = vi.getLCs()
+importlib.reload(vi)
+for ii, ID_list_ROW in enumerate(ID_list):
+    start = time.time()
+    ra = np.float64(ID_list_ROW[1])
+    dec = np.float64(ID_list_ROW[2])
+    fig = plt.figure(figsize=(12,9), constrained_layout=True)
+    gs = GridSpec(2, 7, figure=fig, height_ratios=[1, 1], width_ratios=[1, 1, 1, 1, 0.4, 1, 1])#, hspace=0.3, wspace=0.5)
+    ax1 = fig.add_subplot(gs[0, :2])#LC
+    ax2 = fig.add_subplot(gs[0, 2:4])#SDSS DR12 Image
+    ax3 = fig.add_subplot(gs[0, 5:])#color-color Diagram?
+    ax4 = fig.add_subplot(gs[1, :])#spectra with lines
+
+    ra_string = '{:0>9.5f}'.format(np.float64(ID_list_ROW[1]))
+    dec_string = '{:0=+10.5f}'.format(np.float64(ID_list_ROW[2]))
+
+    vi.plot_SDSS_LC(ID_list_ROW, ax1)
+    vi.plot_SDSS_photo(ra, dec, image_dir, ax2)
+    vi.plot_CCD(ID_list_ROW, ccd_kde, ax3)
+
+    #plt.savefig(Vi_plots_dir+ra_string+dec_string+"_Vi.eps",dpi=600,bbox_inches='tight')
+    plt.savefig(Vi_plots_dir+ra_string+dec_string+"_Vi.png",dpi=600,bbox_inches='tight')
+    #plt.show()
+    plt.clf()
+    plt.close()
+    print(time.time() - start)
+
 #***********************************************
 #Set paramters for running Vi
 box_size = 10
 nbins=50
-
-vartools_command = " -LS 0.1 10.0 0.1 1 0 -Phase ls  -Killharm fix 1 1.0 1 1 1 "+vt_outdir+" fitonly "
-vartools_command_header = "Name LS_Period_1_0 Log10_LS_Prob_1_0 LS_Periodogram_Value_1_0 LS_SNR_1_0 \
-                           Killharm_Mean_Mag_2 Killharm_Period_1_2 Killharm_Per1_Subharm_2_Sincoeff_2 \
-                           Killharm_Per1_Subharm_2_Coscoeff_2 Killharm_Per1_Fundamental_Sincoeff_2 \
-                           Killharm_Per1_Fundamental_Coscoeff_2 Killharm_Per1_Harm_2_Sincoeff_2 \
-                           Killharm_Per1_Harm_2_Coscoeff_2 Killharm_Per1_Amplitude_2 \n"
-
-vartools_command_whitten = " -LS 0.1 10.0 0.1 2 0 -Phase ls  -Killharm fix 1 1.0 1 1 1 "+vt_outdir+" fitonly "
-vartools_command_header_whitten = "Name LS_Period_1_0 Log10_LS_Prob_1_0 LS_Periodogram_Value_1_0 LS_SNR_1_0 \
-                                LS_Period_1_1 Log10_LS_Prob_1_1 LS_Periodogram_Value_1_1 LS_SNR_1_1 \
-                                Killharm_Mean_Mag_2 Killharm_Period_1_2 Killharm_Per1_Subharm_2_Sincoeff_2 \
-                                Killharm_Per1_Subharm_2_Coscoeff_2 Killharm_Per1_Fundamental_Sincoeff_2 \
-                                Killharm_Per1_Fundamental_Coscoeff_2 Killharm_Per1_Harm_2_Sincoeff_2 \
-                                Killharm_Per1_Harm_2_Coscoeff_2 Killharm_Per1_Amplitude_2 \n"
-
-vartools_command_whitten2 = " -LS 0.1 10.0 0.1 3 0 -Phase ls  -Killharm fix 1 1.0 1 1 1 "+vt_outdir+" fitonly "
-vartools_command_header_whitten2 = "Name LS_Period_1_0 Log10_LS_Prob_1_0 LS_Periodogram_Value_1_0 LS_SNR_1_0 \
-                                LS_Period_1_1 Log10_LS_Prob_1_1 LS_Periodogram_Value_1_1 LS_SNR_1_1 \
-                                Killharm_Mean_Mag_2 Killharm_Period_1_2 Killharm_Per1_Subharm_2_Sincoeff_2 \
-                                Killharm_Per1_Subharm_2_Coscoeff_2 Killharm_Per1_Fundamental_Sincoeff_2 \
-                                Killharm_Per1_Fundamental_Coscoeff_2 Killharm_Per1_Harm_2_Sincoeff_2 \
-                                Killharm_Per1_Harm_2_Coscoeff_2 Killharm_Per1_Amplitude_2 \n"
-
 #***********************************************
 #***********************************************
 ra_dec_css_ID = np.genfromtxt("sup_data/ra_dec_to_CSS_ID.txt")
@@ -74,17 +93,6 @@ ra = ra_dec_css_ID[:,1]
 dec = ra_dec_css_ID[:,2]
 #***********************************************
 #***********************************************
-TDSSprop = vi.TDSSprop(nbins)
-#***********************************************
-prop_header = "ra, dec, lc_id, Per_ls, logProb_ls, Amp_ls, Mt, a95, lc_skew, Chi2, brtcutoff, brt10per, fnt10per, fntcutoff, errmn, ferrmn, ngood, nrejects, nabove, nbelow, Eqw"
-properties = np.empty((csv_raw_ids.size,21))
-#***********************************************
-latestFullVartoolsRun_filename = "completed_Vi_prop_2019-02-04.csv"
-latestFullVartoolsRun = vi.latestFullVartoolsRun(latestFullVartoolsRun_filename=prop_out_dir+latestFullVartoolsRun_filename)
-#***********************************************
-TDSS_cssid = TDSSprop.TDSS_cssid
-
-hasViRun, prop_id, TDSS_cssid = vi.checkViRun(TDSS_cssid)#if Vi has run, this will find where it let off and continue propid from there
 
 #random_index_to_plot = np.random.randint(low=0, high=TDSS_cssid.size, size=500)
 #from_here_TDSS_cssid = TDSS_cssid[random_index_to_plot][194:]
