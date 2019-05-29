@@ -17,6 +17,7 @@ import os
 import glob
 from pathlib import Path
 import re
+import time
 
 from astropy.table import Table
 from astropy import constants as const
@@ -61,9 +62,9 @@ for ii, ID_list_ROW in enumerate(ID_list):
     ra = np.float64(ID_list_ROW[1])
     dec = np.float64(ID_list_ROW[2])
     fig = plt.figure(figsize=(12,9), constrained_layout=True)
-    gs = GridSpec(2, 7, figure=fig, height_ratios=[1, 1], width_ratios=[1, 1, 1, 1, 0.4, 1, 1])#, hspace=0.3, wspace=0.5)
-    ax1 = fig.add_subplot(gs[0, :2])#LC
-    ax2 = fig.add_subplot(gs[0, 2:4])#SDSS DR12 Image
+    gs = GridSpec(2, 7, figure=fig, height_ratios=[1, 1], width_ratios=[1, 1, 1, 1, 1, 1, 1])#, hspace=0.3, wspace=0.5)
+    ax1 = fig.add_subplot(gs[0, :3])#LC
+    ax2 = fig.add_subplot(gs[0, 3:5])#SDSS DR12 Image
     ax3 = fig.add_subplot(gs[0, 5:])#color-color Diagram?
     ax4 = fig.add_subplot(gs[1, :])#spectra with lines
 

@@ -35,19 +35,25 @@ def plot_SDSS_LC(ID_list_ROW, plt_ax):
     try:
         rband_data = np.loadtxt("LCs/rband/"+filename)
         plt_ax.scatter(rband_data[:,0], rband_data[:,1], color='red', marker='s', label='r')
+        plt_ax.axhline(y=np.median(rband_data[:,1]), color='red', linestyle='dashed')
     except:
         pass
 
     try:
         gband_data = np.loadtxt("LCs/gband/"+filename)
         plt_ax.scatter(gband_data[:,0], gband_data[:,1], color='blue', marker='o', label='g')
+        plt_ax.axhline(y=np.median(gband_data[:,1]), color='blue', linestyle='dashed')
     except:
         pass
 
-    title_line = "SDSS{!s} | RA={!s} DEC={!s} \n  i={!s}  $\chi^2_g=${!s} $\chi^2_r=${!s}".format(filename, np.round(ra, 6), np.round(dec, 6),
+    title_line = (r"SDSS{!s}"
+                  "\n"
+                  r"RA={!s} DEC={!s}"
+                  "\n"
+                  r"$\bar{{i}}=${!s}  $\chi^2_g=${!s} $\chi^2_r=${!s}".format(filename, np.round(ra, 6), np.round(dec, 6),
                                                                     np.round(meani, 2), np.round(chiG, 2),
-                                                                    np.round(chiR, 2))
-
+                                                                    np.round(chiR, 2)))
+    plt_ax.legend(loc='best')
     plt_ax.set_xlabel('MJD')
     plt_ax.set_ylabel('Mag')
     plt_ax.set_title(title_line, fontsize=12)
