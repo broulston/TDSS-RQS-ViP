@@ -21,18 +21,25 @@ import time
 
 from astropy.table import Table
 from astropy import constants as const
-from astropy import units as u
+from astropy import units
 from astropy.io import fits
 from astropy import coordinates as coords
 
 import mimic_alpha as ma
-import TDSS_RQS_ViP_FUNCTIONS as vi
 import importlib
+
+import TDSS_RQS_ViP_FUNCTIONS as vi
 
 spAll_dir = "/Users/benjaminroulston/Dropbox/Research/TDSS/Variable_Stars/HARD_COPY_ORGINAL_DATA/SDSS_spec/getting_prop_spec/"
 spAll  = fits.open(spAll_dir+'spAll-v5_10_10_propSPEC.fits')
 
 main_lc_data_files_path="LCs/"
+
+RQS_Observed = np.genfromtxt("RQS-01Jul2018.txt", names=True, dtype=None)
+# PLATE = RQS_Observed[:]['PLATE']
+plug_ra = RQS_Observed[:]['PLUG_RA']
+plug_dec = RQS_Observed[:]['PLUG_DEC']
+plug_coord = coords.SkyCoord(plug_ra*units.deg, plug_dec*units.deg, frame='icrs')
 
 ID_list = np.genfromtxt('ID_list.dat', dtype="U")
 u = np.float64(ID_list[:,4])
@@ -61,6 +68,8 @@ for ii, ID_list_ROW in enumerate(ID_list):
     start = time.time()
     ra = np.float64(ID_list_ROW[1])
     dec = np.float64(ID_list_ROW[2])
+    current_coord = coords.SkyCoord(ra*units.deg, dec*units.deg, frame='icrs')
+    current_coord.separation(plug_coord)
     fig = plt.figure(figsize=(12,9), constrained_layout=True)
     gs = GridSpec(2, 7, figure=fig, height_ratios=[1, 1], width_ratios=[1, 1, 1, 1, 1, 1, 1])#, hspace=0.3, wspace=0.5)
     ax1 = fig.add_subplot(gs[0, :3])#LC
